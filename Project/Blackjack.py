@@ -8,7 +8,7 @@ pygame.init()
 cards = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
 one_deck = 4 * cards
 decks = 4
-money = 1000 #player starts with $1000
+money = 5000 #player starts with $1000
 WIDTH = 1200
 HEIGHT = 700
 background_color = "#1A8A3B"
