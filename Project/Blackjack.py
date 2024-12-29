@@ -31,7 +31,6 @@ dealer_hand = []
 outcome = 0
 reveal_dealer = False
 hand_active = False
-outcome = 0
 add_score = False
 results = ['', 'PLAYERCAT BUSTED', 'PLAYERCAT WINS', 'DEALERCAT WINS', 'TIE GAME']
 
@@ -125,8 +124,7 @@ def calculate_score(hand):
     
 
 # draw game conditions and buttons
-def draw_game(act, record, result):
-    global money
+def draw_game(act, record, result, money):
     button_list = []
     # initially on startup (not active) ask number of decks and deal new hand button to confirm
     if not act:
@@ -159,11 +157,10 @@ def draw_game(act, record, result):
         screen.blit(deal_text, (475, 298))
         button_list.append(deal)
         
-    return button_list
+    return button_list, money
 
 # add money on win, substract on loss, nothing on tie
-def change_money(input):
-    global money
+def change_money(input, money):
     if input == 1 or input == 3:
         money -= 100
     elif input == 2:
@@ -192,7 +189,7 @@ def check_endgame(money):
         show_cat("win")
     
 # check endround conditions function
-def check_endround(hand_act, deal_score, play_score, result, totals, add):
+def check_endround(hand_act, deal_score, play_score, result, totals, add, money):
     # check endround scenarios if player has stood, busted or blackjack
     # result 1 - player bust, 2 - win, 3 - loss, 4 - push
     if not hand_act and deal_score >= 17:
@@ -211,11 +208,11 @@ def check_endround(hand_act, deal_score, play_score, result, totals, add):
                 totals[0] += 1
             else:
                 totals[2] += 1
-            change_money(result)
+            money = change_money(result, money)
             add = False
     show_cat(result)
     check_endgame(money)
-    return result, totals, add
+    return result, totals, add, money
 
 
 # main game loop
@@ -242,7 +239,7 @@ while run:
             if dealer_score < 17:
                 dealer_hand, game_deck = deal_cards(dealer_hand, game_deck)
         draw_scores(player_score, dealer_score)
-    buttons = draw_game(active, records, outcome)
+    buttons, money = draw_game(active, records, outcome, money)
 
     # event handling, if quit pressed, then exit game
     for event in pygame.event.get():
@@ -256,7 +253,6 @@ while run:
                     game_deck = copy.deepcopy(decks * one_deck)
                     my_hand = []
                     dealer_hand = []
-                    outcome = 0
                     hand_active = True
                     outcome = 0
                     add_score = True
@@ -290,7 +286,7 @@ while run:
         hand_active = False
         reveal_dealer = True
     
-    outcome, records, add_score = check_endround(hand_active, dealer_score, player_score, outcome, records, add_score)
+    outcome, records, add_score, money = check_endround(hand_active, dealer_score, player_score, outcome, records, add_score, money)
 
 
     pygame.display.flip()
