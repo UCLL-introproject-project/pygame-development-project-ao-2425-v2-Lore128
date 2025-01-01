@@ -27,7 +27,9 @@ very_happy_cat = pygame.image.load("img/veryhappycat.png").convert()
 lose_cat = pygame.image.load("img/losecat.png").convert()
 win_cat = pygame.image.load("img/wincat.png").convert()
 
+
 def set_cat_mood(key):
+    """sets mood for cat depending on result or score"""
     if key == 1 or key == 3:
         return sad_cat
     elif key == 2:
@@ -37,8 +39,9 @@ def set_cat_mood(key):
             return happy_cat
         return mad_cat
 
+
 def show_cat(current_cat_mood):
-    """function to show player cat, mood depending on end-of-round result or current score of end-of-game scenario"""
+    """shows current mood of player cat on screen"""
     if current_cat_mood == lose_cat or current_cat_mood == win_cat:
         screen.blit(current_cat_mood, (450, 340))
     else:
@@ -68,17 +71,14 @@ def deal_cards(current_hand, current_deck):
 
 
 def calculate_score(hand):
-    """calculate best score possible for given hand"""
-    """calculate hand score fresh every time, check how many aces we have"""
+    """calculate best score possible for given hand while adjusting aces if needed"""
     hand_score = 0
     aces_count = hand.count('A')
     for card in hand:
 
-        """for 2, 3, 4, 5, 6, 7, 8, 9 - just add number to total"""
         if card in ['2', '3', '4', '5', '6', '7', '8', '9']:
             hand_score += int(card)
 
-        """for 10 and face cards, add 10"""
         if card in ['10', 'J', 'Q', 'K']:
             hand_score += 10
 
@@ -86,7 +86,6 @@ def calculate_score(hand):
         if card == 'A':
             hand_score += 11
         
-        """determine how many aces need to be 1 instead of 11 to get under 21 if possible"""
     while hand_score > 21 and aces_count > 0:
         hand_score -= 10
         aces_count -= 1
@@ -160,6 +159,32 @@ def draw_game(active, record, outcome):
     return button_list
 
 
+def check_endround(hand_act, deal_score, play_score, result, totals, add, money, current_cat_mood):
+    """check endround scenarios if player has stood, busted or blackjack"""
+    """result 1 - player bust, 2 - win, 3 - loss, 4 - push"""
+    if not hand_act and deal_score >= 17:
+        if play_score > 21:
+            result = 1
+        elif deal_score < play_score <= 21 or deal_score > 21:
+            result = 2
+        elif play_score < deal_score <= 21:
+            result = 3
+        else:
+            result = 4
+        if add:
+            if result == 1 or result == 3:
+                totals[1] +=1
+            elif result == 2:
+                totals[0] += 1
+            else:
+                totals[2] += 1
+            money = change_money(result, money)
+            add = False
+            current_cat_mood = set_cat_mood(result)
+    check_endgame(money)
+    return result, totals, add, money, current_cat_mood
+
+
 def change_money(input, money):
     """add money on win, substract on loss, nothing on tie"""
     if input == 1 or input == 3:
@@ -191,41 +216,13 @@ def check_endgame(money):
         screen.blit(smaller_font.render("(now get off your pc)", True, 'Black'), (430, 270))
         current_cat_mood = win_cat
         show_cat(current_cat_mood)
-    
 
-def check_endround(hand_act, deal_score, play_score, result, totals, add, money, current_cat_mood):
-    """check endround scenarios if player has stood, busted or blackjack"""
-    """result 1 - player bust, 2 - win, 3 - loss, 4 - push"""
-    if not hand_act and deal_score >= 17:
-        if play_score > 21:
-            result = 1
-        elif deal_score < play_score <= 21 or deal_score > 21:
-            result = 2
-        elif play_score < deal_score <= 21:
-            result = 3
-        else:
-            result = 4
-        if add:
-            if result == 1 or result == 3:
-                totals[1] +=1
-            elif result == 2:
-                totals[0] += 1
-            else:
-                totals[2] += 1
-            money = change_money(result, money)
-            add = False
-            current_cat_mood = set_cat_mood(result)
-    check_endgame(money)
-    return result, totals, add, money, current_cat_mood
 
 def initialize_game():
     """initializes game variables for first game"""
-    """returns active (bool), initial_deal (bool), game_deck (list), my_hand (empty list), dealer_hand (empty list), outcome, hand_active, reveal_dealer, add_score, dealer_score, player_score, money, records, results"""
+    """returns active (bool), initial_deal (bool), game_deck (list), my_hand (empty list), dealer_hand (empty list), outcome (int), hand_active (bool), reveal_dealer (bool), add_score (bool), dealer_score (int), player_score (int), money (int), records (list), results (list)"""
     return False, True, create_game_deck(), [], [], 0, False, False, True, 0, 0, 1000, [0, 0, 0], ['', 'PLAYERCAT BUSTED', 'PLAYERCAT WINS', 'DEALERCAT WINS', 'TIE GAME']
 
-def reset_game():
-    """initializes game variables"""
-    return True, True, create_game_deck(), [], [], 0, True, False, True, 0, 0, set_cat_mood(0)
 
 def render_game():
     """function to render game elements on screen"""
@@ -234,6 +231,13 @@ def render_game():
     show_cat(current_cat_mood)
     screen.blit(dealer_cat, (950, 150))
 
+
+def reset_game():
+    """initializes game variables"""
+    """returns active (bool), initial_deal (bool), game_deck (list), my_hand (empty list), dealer_hand (empty list), outcome (int), hand_active (bool), reveal_dealer (bool), add_score (bool), dealer_score (int), player_score (int), current_cat_mood"""
+    return True, True, create_game_deck(), [], [], 0, True, False, True, 0, 0, set_cat_mood(0)
+
+
 def handle_initial_deal(my_hand, dealer_hand, game_deck):
     """handles the initial deal to player en dealer"""
     for i in range(2):
@@ -241,7 +245,9 @@ def handle_initial_deal(my_hand, dealer_hand, game_deck):
         dealer_hand, game_deck = deal_cards(dealer_hand, game_deck)
     return my_hand, dealer_hand, game_deck
 
+
 def update_scores_and_cards(reveal_dealer, my_hand, dealer_hand, game_deck, player_score, dealer_score):
+    """updates the scores and cards shown on screen"""
     player_score = calculate_score(my_hand)
     draw_cards(my_hand, dealer_hand, reveal_dealer)
     if reveal_dealer:
@@ -251,46 +257,59 @@ def update_scores_and_cards(reveal_dealer, my_hand, dealer_hand, game_deck, play
     draw_scores(player_score, dealer_score)
     return player_score, dealer_score, dealer_hand, game_deck
 
+
+def handle_events(run, active, buttons, event, player_score, hand_active, my_hand, game_deck, current_cat_mood, reveal_dealer):
+    """handles events of buttons in game"""
+    if event.type == pygame.QUIT:
+        run = False
+        return run
+    if event.type == pygame.MOUSEBUTTONUP:
+        if not active:
+            """if the game is not active, the only option is to deal a new hand"""
+            if buttons[0].collidepoint(event.pos):
+                return reset_game()
+            
+        else:
+            """handle hit, stand of new hand actions"""
+            if buttons[0].collidepoint(event.pos) and player_score < 21 and hand_active:
+                """if player can hit, allow them to draw a card"""
+                my_hand, game_deck = deal_cards(my_hand, game_deck)
+                current_cat_mood = ask_cat
+                show_cat(current_cat_mood)
+            elif buttons[1].collidepoint(event.pos) and not reveal_dealer:
+                """allow player to end turn (stand)"""
+                reveal_dealer = True
+                hand_active = False
+            elif len(buttons) == 3 and buttons[2].collidepoint(event.pos):
+                return reset_game()
+    return active, initial_deal, game_deck, my_hand, dealer_hand, outcome, hand_active, reveal_dealer, add_score, dealer_score, player_score, current_cat_mood
+
+
 """main game loop"""
 run = True
 active, initial_deal, game_deck, my_hand, dealer_hand, outcome, hand_active, reveal_dealer, add_score, dealer_score, player_score, money, records, results = initialize_game()
 current_cat_mood = set_cat_mood(0)
 show_cat(current_cat_mood)
+
 while run:
     """run game at our framerate and render game elements"""
     timer.tick(fps)
     render_game()
-    """initial deal to player and dealer"""
+
     if initial_deal:
+        """initial deal to player and dealer"""
         my_hand, dealer_hand, game_deck = handle_initial_deal(my_hand, dealer_hand, game_deck)
         initial_deal = False
-    """once game is activated and dealt, calculate scores and display cards"""
+
     if active:
+        """once game is activated and dealt, calculate scores and display cards"""
         player_score, dealer_score, dealer_hand, game_deck = update_scores_and_cards(reveal_dealer, my_hand, dealer_hand, game_deck, player_score, dealer_score)
         
     buttons = draw_game(active, records, outcome)
 
-    """event handling, if quit pressed, then exit game"""
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            run = False
-        if event.type == pygame.MOUSEBUTTONUP:
-            if not active:
-                if buttons[0].collidepoint(event.pos):
-                    active, initial_deal, game_deck, my_hand, dealer_hand, outcome, hand_active, reveal_dealer, add_score, dealer_score, player_score, current_cat_mood = reset_game()
-            else:
-                if buttons[0].collidepoint(event.pos) and player_score < 21 and hand_active:
-                    """if player can hit, allow them to draw a card"""
-                    my_hand, game_deck = deal_cards(my_hand, game_deck)
-                    current_cat_mood = ask_cat
-                    show_cat(current_cat_mood)
-                elif buttons[1].collidepoint(event.pos) and not reveal_dealer:
-                    """allow player to end turn (stand)"""
-                    reveal_dealer = True
-                    hand_active = False
-                elif len(buttons) == 3:
-                    if buttons[2].collidepoint(event.pos):
-                        active, initial_deal, game_deck, my_hand, dealer_hand, outcome, hand_active, reveal_dealer, add_score, dealer_score, player_score, current_cat_mood = reset_game()
+        """event handling"""
+        active, initial_deal, game_deck, my_hand, dealer_hand, outcome, hand_active, reveal_dealer, add_score, dealer_score, player_score, current_cat_mood = handle_events(run, active, buttons, event, player_score, hand_active, my_hand, game_deck, current_cat_mood, reveal_dealer)        
     
     if hand_active and player_score > 21:
         """if player busts, automatically  end turn - treat like a stand"""
